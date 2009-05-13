@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 
 import javax.servlet.ServletContext;
@@ -41,20 +42,20 @@ public class g_proxyServlet extends HttpServlet {
 			
 
 			//whether is the Home page
-			if (realUrl.isEmpty()) {
+			if (realUrl.length()==0) {
 				returnHome(resp);
 				return;
 			}
 			
-			System.out.println("The inputed URI:"+realUrl);
+//			System.out.println("The inputed URI:"+realUrl);
 			
 			//form the URL
 			URL url = new URL(realUrl);
 			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 			String contentType = connection.getContentType();
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_OK && contentType.toLowerCase().contains("text")) {
-                // replace every links inside
-    			replaceLinkAndReturnContent(url.openStream(), resp.getOutputStream());
+                // is text file, replace every links inside
+    			replaceLinkAndReturnContent(connection, resp);
             } else {
             	//visit the URL
     			retrieveAndReturnUrlContent(url.openStream(), resp.getOutputStream());
@@ -62,11 +63,8 @@ public class g_proxyServlet extends HttpServlet {
 
 		}
 		catch(Exception e){
-			System.out.println(e);
-			OutputStreamWriter writer = new OutputStreamWriter(resp.getOutputStream());
-	        writer.write(e.toString());
-	        writer.flush();
-	        writer.close();
+			e.printStackTrace();
+			e.printStackTrace(resp.getWriter());
 		}
 	}
 	
@@ -118,38 +116,45 @@ public class g_proxyServlet extends HttpServlet {
         // Copy the contents of the file to the output stream
         byte[] buf = new byte[1024];
         int count = 0;
-        System.out.println("print out the stream:");
+//        System.out.println("print out the stream:");
         while ((count = in.read(buf)) >= 0) {
-        	System.out.println(count);
+//        	System.out.println(count);
             out.write(buf, 0, count);
         }
         in.close();
         out.close();
 	}
 	
-	private void replaceLinkAndReturnContent(InputStream in, OutputStream out) throws Exception{
-		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+	private void replaceLinkAndReturnContent(HttpURLConnection connection, HttpServletResponse resp) throws Exception{
+		BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 		StringBuffer sBuffer = new StringBuffer();
         String line;
+//        System.out.println("--------------in------------:");
         while ((line = reader.readLine()) != null) {
         	sBuffer.append(line);
+//        	System.out.println(line);
         }
         reader.close();
         String content = sBuffer.toString();
+//        System.out.println("--------------out("+content.length()+")------------:");
+//        System.out.println(content);
         
         //replace
-        content.replaceAll("src=\"http://", "src=\"https://g-proxy.appspot.com/http://");
-        content.replaceAll("src=\"https://", "src=\"https://g-proxy.appspot.com/https://");
-        content.replaceAll("href=\"http://", "href=\"https://g-proxy.appspot.com/http://");
-        content.replaceAll("href=\"https://", "href=\"https://g-proxy.appspot.com/https://");        
-        content.replaceAll("src='http://", "src='https://g-proxy.appspot.com/http://");
-        content.replaceAll("src='https://", "src='https://g-proxy.appspot.com/https://");
-        content.replaceAll("href='http://", "href='https://g-proxy.appspot.com/http://");
-        content.replaceAll("href='https://", "href='https://g-proxy.appspot.com/https://");
+        content = content.replaceAll("src=\"https://", "src=\"https://g-proxy.appspot.com/https://");
+        content = content.replaceAll("src=\"http://", "src=\"https://g-proxy.appspot.com/http://");
+        content = content.replaceAll("href=\"https://", "href=\"https://g-proxy.appspot.com/https://");        
+        content = content.replaceAll("href=\"http://", "href=\"https://g-proxy.appspot.com/http://");
+        content = content.replaceAll("src='https://", "src='https://g-proxy.appspot.com/https://");
+        content = content.replaceAll("src='http://", "src='https://g-proxy.appspot.com/http://");
+        content = content.replaceAll("href='https://", "href='https://g-proxy.appspot.com/https://");
+        content = content.replaceAll("href='http://", "href='https://g-proxy.appspot.com/http://");
         
-        OutputStreamWriter writer = new OutputStreamWriter(out);
-        writer.write(content);
-        writer.flush();
-        writer.close();
+		resp.setContentType(connection.getContentType());
+		OutputStream out = resp.getOutputStream();
+		byte[] bytes = content.getBytes();
+        out.write(bytes, 0, bytes.length);
+//        System.out.println("--------------end of out bytes("+bytes.length+")------------:");
+        out.flush();
+        out.close();
 	}
 }
