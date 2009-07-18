@@ -15,9 +15,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.BufferedWriter;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 
 import javax.servlet.ServletContext;
@@ -25,15 +25,19 @@ import javax.servlet.http.*;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLDecoder;
+
+import java.util.logging.Logger;
 
 @SuppressWarnings("serial")
 public class g_proxyServlet extends HttpServlet {
 	
+	private static final Logger log = Logger.getLogger(g_proxyServlet.class.getName());
+	
 	@Override
 	public void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
+		
 		resp.setContentType("text/plain");
 		try{
 			//find the URL
@@ -42,12 +46,12 @@ public class g_proxyServlet extends HttpServlet {
 			
 
 			//whether is the Home page
-			if (realUrl.length()==0) {
+			if (realUrl.length()==0 || realUrl.equalsIgnoreCase("index.html")) {
 				returnHome(resp);
 				return;
 			}
 			
-//			System.out.println("The inputed URI:"+realUrl);
+			log.info("The inputed URI:"+realUrl);
 			
 			//form the URL
 			URL url = new URL(realUrl);
@@ -129,15 +133,15 @@ public class g_proxyServlet extends HttpServlet {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 		StringBuffer sBuffer = new StringBuffer();
         String line;
-//        System.out.println("--------------in------------:");
+        log.info("--------------in------------:");
         while ((line = reader.readLine()) != null) {
         	sBuffer.append(line);
-//        	System.out.println(line);
+        	log.info(line);
         }
         reader.close();
         String content = sBuffer.toString();
-//        System.out.println("--------------out("+content.length()+")------------:");
-//        System.out.println(content);
+        log.info("--------------out("+content.length()+")------------:");
+        log.info(content);
         
         //replace
         content = content.replaceAll("src=\"https://", "src=\"https://g-proxy.appspot.com/https://");
@@ -151,10 +155,10 @@ public class g_proxyServlet extends HttpServlet {
         
 		resp.setContentType(connection.getContentType());
 		OutputStream out = resp.getOutputStream();
-		byte[] bytes = content.getBytes();
-        out.write(bytes, 0, bytes.length);
-//        System.out.println("--------------end of out bytes("+bytes.length+")------------:");
-        out.flush();
-        out.close();
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+
+		writer.write(content, 0, content.length());
+		writer.flush();
+		writer.close();
 	}
 }
