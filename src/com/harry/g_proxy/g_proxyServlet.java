@@ -29,12 +29,11 @@ import java.net.URLDecoder;
 
 import java.util.logging.Logger;
 
-import java.util.Arrays;
-
 @SuppressWarnings("serial")
 public class g_proxyServlet extends HttpServlet {
 	
 	private static final Logger log = Logger.getLogger(g_proxyServlet.class.getName());
+	private final static String proxyHost = "https://g-proxy.appspot.com/";
 	private final static byte[] prefixForHttp = {104, 116, 116, 112, 115, 58, 47, 47, 103, 45, 112, 114, 111, 120, 121, 46, 97, 112, 112, 115, 112, 111, 116, 46, 99, 111, 109, 47, 104, 116, 116, 112, 58, 47, 47}; // https://g-proxy.appspot.com/http://
 	private final static byte[] prefixForHttps = {104, 116, 116, 112, 115, 58, 47, 47, 103, 45, 112, 114, 111, 120, 121, 46, 97, 112, 112, 115, 112, 111, 116, 46, 99, 111, 109, 47, 104, 116, 116, 112, 115, 58, 47, 47}; // https://g-proxy.appspot.com/https://
     //private final static byte[][] b = {(byte[])"src=\"https://", (byte[])"src=\"https://g-proxy.appspot.com/https://"};
@@ -63,12 +62,22 @@ public class g_proxyServlet extends HttpServlet {
 				return;
 			}
 			
-			log.info("The inputed URI:"+realUrl);
+			// log.info("--------The inputed URI:"+realUrl);
 			
 			//form the URL
 			URL url = new URL(realUrl);
 			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 			String contentType = connection.getContentType();
+			// log.info("------contentType: "+contentType);
+			
+			//change referer is impossible in Google App Engine
+//			String referer = req.getHeader("referer");
+//			log.info("------referer: "+referer);
+//			if (referer!=null && referer.startsWith(proxyHost) && proxyHost.length()<referer.length()){
+//				referer = referer.substring(proxyHost.length());
+//			}
+//			connection.setRequestProperty("referer", referer);
+			
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_OK && contentType.toLowerCase().contains("text")) {
                 // is text file, replace every links inside
 				replaceLinkAndReturnContentByBytes(connection, resp, contentType);
