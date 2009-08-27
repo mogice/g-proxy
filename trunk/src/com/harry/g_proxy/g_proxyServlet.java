@@ -38,7 +38,12 @@ public class g_proxyServlet extends HttpServlet {
 	private final static byte[] prefixForHttps = {104, 116, 116, 112, 115, 58, 47, 47, 103, 45, 112, 114, 111, 120, 121, 46, 97, 112, 112, 115, 112, 111, 116, 46, 99, 111, 109, 47, 104, 116, 116, 112, 115, 58, 47, 47}; // https://g-proxy.appspot.com/https://
 	private final static byte[] prefixForHrefDQ = {104, 114, 101, 102, 61, 34, 47 }; //href="/
 	private final static byte[] prefixForHrefSQ = {104, 114, 101, 102, 61, 39, 47 }; //href='/
-	private final static byte[] prefixForslash = {47}; //href='/
+	private final static byte[] prefixForSrcDQ = {115, 114, 99, 61, 34, 47 }; //src="/
+	private final static byte[] prefixForSrcSQ = {115, 114, 99, 61, 39, 47 }; //src='/
+	private final static byte[] prefixForActionDQ = {97, 99, 116, 105, 111, 110, 61, 34, 47 }; //action="/
+	private final static byte[] prefixForActionSQ = {97, 99, 116, 105, 111, 110, 61, 39, 47 }; //action='/	
+	private final static byte[] prefixForActionNoQuote = {97, 99, 116, 105, 111, 110, 61, 47 }; //action=/	
+	private final static byte[] prefixForslash = {47}; // /
 
 	@Override
 	public void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -63,6 +68,7 @@ public class g_proxyServlet extends HttpServlet {
 				}
 				else{
 					requestHost = realUrl;
+					realUrl+="/";
 				}
 			}
 			if (requestHost == null){
@@ -209,6 +215,66 @@ public class g_proxyServlet extends HttpServlet {
         			out.write(requestHostBytes);
         			out.write(prefixForslash);
         			i += 7;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==115 && buf[i+1]==114 && buf[i+2]==99 && buf[i+3]==61 && buf[i+4]==34 && buf[i+5]==47){
+        			// src="/
+		        	// 115, 114, 99, 61, 34, 47
+        			// =>
+        			// src="/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForSrcDQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 6;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==115 && buf[i+1]==114 && buf[i+2]==99 && buf[i+3]==61 && buf[i+4]==39 && buf[i+5]==47){
+        			// src='/
+		        	// 115, 114, 99, 61, 39, 47
+        			// =>
+        			// src='/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForSrcSQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 6;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==97 && buf[i+1]==99 && buf[i+2]==116 && buf[i+3]==105 && buf[i+4]==111 && buf[i+5]==110 && buf[i+6]==61 && buf[i+7]==34 && buf[i+8]==47){
+        			// action="/
+		        	// 97, 99, 116, 105, 111, 110, 61, 34, 47
+        			// =>
+        			// action="/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForActionDQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 9;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==97 && buf[i+1]==99 && buf[i+2]==116 && buf[i+3]==105 && buf[i+4]==111 && buf[i+5]==110 && buf[i+6]==61 && buf[i+7]==39 && buf[i+8]==47){
+        			// action='/
+		        	// 97, 99, 116, 105, 111, 110, 61, 39, 47
+        			// =>
+        			// action='/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForActionSQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 9;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==97 && buf[i+1]==99 && buf[i+2]==116 && buf[i+3]==105 && buf[i+4]==111 && buf[i+5]==110 && buf[i+6]==61 && buf[i+7]==47){
+        			// action=/
+		        	// 97, 99, 116, 105, 111, 110, 61, 47
+        			// =>
+        			// action=/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForActionNoQuote);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 8;
         			toWrite = i;
         		}
         	}
