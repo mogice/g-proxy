@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/GDD/dev/eclipse/plugins/javax.servlet_2.4.0.v200706111738.jar"/>
+	<classpathentry kind="lib" path="C:/GDD/dev/eclipse/plugins/javax.servlet.jsp_2.0.0.v200706191603.jar"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
+	<classpathentry kind="output" path="war/WEB-INF/classes"/>
+</classpath>

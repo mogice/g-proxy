@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>G-Proxy</title>
+  </head>
+  <body>
+  <script type="text/javascript"> 
+	function openurl(){
+		var server = location.href;
+		var url = document.url_form.url.value;
+		//alert(server+escape(url));
+		var newWin = window.open(server+escape(url));
+	}
+  </script> 
+	<h1>G-Proxy - Free Open Source HTTPS Proxy</h1>
+	<p>It fully supports Chinese character and other double-byte language now. All src, action, href attributes will be converted if necessary.</p>
+    <h2>Please input a URL:</h2>
+    <p>e.g. http://www.liuhongwei.name/</p>
+    <form method="get" action="javascript:openurl();" name="url_form">
+    	<p>URL <input type="text" name="url"></p>
+    	<p><input type="submit" onclick="openurl();return false;"></p>
+    </form>
+    <p>It is an <a href="http://code.google.com/p/g-proxy/">free open source HTTPS proxy</a> by <a href="http://blog.liuhongwei.cn/">blog of iPhone and Google App Engine</a></p>
+  </body>
+</html>
