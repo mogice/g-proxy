@@ -36,25 +36,48 @@ public class g_proxyServlet extends HttpServlet {
 	private final static String proxyHost = "https://g-proxy.appspot.com/";
 	private final static byte[] prefixForHttp = {104, 116, 116, 112, 115, 58, 47, 47, 103, 45, 112, 114, 111, 120, 121, 46, 97, 112, 112, 115, 112, 111, 116, 46, 99, 111, 109, 47, 104, 116, 116, 112, 58, 47, 47}; // https://g-proxy.appspot.com/http://
 	private final static byte[] prefixForHttps = {104, 116, 116, 112, 115, 58, 47, 47, 103, 45, 112, 114, 111, 120, 121, 46, 97, 112, 112, 115, 112, 111, 116, 46, 99, 111, 109, 47, 104, 116, 116, 112, 115, 58, 47, 47}; // https://g-proxy.appspot.com/https://
-    //private final static byte[][] b = {(byte[])"src=\"https://", (byte[])"src=\"https://g-proxy.appspot.com/https://"};
-//    content = content.replaceAll("src=\"http://", "src=\"https://g-proxy.appspot.com/http://");
-//    content = content.replaceAll("href=\"https://", "href=\"https://g-proxy.appspot.com/https://");        
-//    content = content.replaceAll("href=\"http://", "href=\"https://g-proxy.appspot.com/http://");
-//    content = content.replaceAll("src='https://", "src='https://g-proxy.appspot.com/https://");
-//    content = content.replaceAll("src='http://", "src='https://g-proxy.appspot.com/http://");
-//    content = content.replaceAll("href='https://", "href='https://g-proxy.appspot.com/https://");
-//    content = content.replaceAll("href='http://", "href='https://g-proxy.appspot.com/http://");
-	
+	private final static byte[] prefixForHrefDQ = {104, 114, 101, 102, 61, 34, 47 }; //href="/
+	private final static byte[] prefixForHrefSQ = {104, 114, 101, 102, 61, 39, 47 }; //href='/
+	private final static byte[] prefixForslash = {47}; //href='/
+
 	@Override
 	public void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
-		
+        // Get the absolute path of the image
+        ServletContext sc = getServletContext();
+        
 		resp.setContentType("text/plain");
 		try{
 			//find the URL
 			String realUrl = getUrl(req);
 			if (realUrl.startsWith("/")) realUrl = realUrl.substring(1);
 			
+			//save the request host
+			//http://aaa.com/bbb  => http://aaa.com
+			String requestHost = null;
+			byte[] requestHostBytes = null;
+			if (realUrl.length()>10){
+				int k = realUrl.indexOf("/", 8);
+				if (k>0){
+					k+=8;
+					requestHost = realUrl.substring(0,k);
+				}
+				else{
+					requestHost = realUrl;
+				}
+			}
+			if (requestHost == null){
+	            sc.log("don't have request URL "+realUrl);
+	            returnHome(resp);
+	            return;
+			}
+			else{
+				char[] requestHostChars = requestHost.toCharArray();
+				requestHostBytes = new byte[requestHostChars.length];
+				for(int i=0;i<requestHostChars.length;i++){
+					requestHostBytes[i]=(byte)requestHostChars[i];
+				}
+			}
 
 			//whether is the Home page
 			if (realUrl.length()==0 || realUrl.equalsIgnoreCase("index.html")) {
@@ -68,19 +91,10 @@ public class g_proxyServlet extends HttpServlet {
 			URL url = new URL(realUrl);
 			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 			String contentType = connection.getContentType();
-			// log.info("------contentType: "+contentType);
-			
-			//change referer is impossible in Google App Engine
-//			String referer = req.getHeader("referer");
-//			log.info("------referer: "+referer);
-//			if (referer!=null && referer.startsWith(proxyHost) && proxyHost.length()<referer.length()){
-//				referer = referer.substring(proxyHost.length());
-//			}
-//			connection.setRequestProperty("referer", referer);
-			
+
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_OK && contentType.toLowerCase().contains("text")) {
                 // is text file, replace every links inside
-				replaceLinkAndReturnContentByBytes(connection, resp, contentType);
+				replaceLinkAndReturnContentByBytes(connection, resp, contentType, requestHostBytes);
             } else {
             	//visit the URL
     			retrieveAndReturnUrlContent(url.openStream(), resp.getOutputStream());
@@ -148,7 +162,7 @@ public class g_proxyServlet extends HttpServlet {
         out.close();
 	}
 
-	private void replaceLinkAndReturnContentByBytes(HttpURLConnection connection, HttpServletResponse resp, String contentType) throws Exception{
+	private void replaceLinkAndReturnContentByBytes(HttpURLConnection connection, HttpServletResponse resp, String contentType, byte[] requestHostBytes) throws Exception{
 		InputStream in = connection.getInputStream();
 		OutputStream out = resp.getOutputStream();
 		byte[] buf = new byte[1024];
@@ -156,19 +170,46 @@ public class g_proxyServlet extends HttpServlet {
         while ((count = in.read(buf)) >= 0) {
         	int leftCount = count-7;
         	int toWrite = 0;
-        	//http://
-        	//104 116 116 112 58 47 47
+
         	for(int i=0;i<count;i++){
         		if (i<leftCount && buf[i]==104 && buf[i+1]==116 && buf[i+2]==116 && buf[i+3]==112 && buf[i+4]==58 && buf[i+5]==47 && buf[i+6]==47){
+		        	//http://
+		        	//104 116 116 112 58 47 47
         			out.write(buf, toWrite, i-toWrite);
         			out.write(prefixForHttp);
         			i += 7;
         			toWrite = i;
         		}
         		else if  (i<leftCount && buf[i]==104 && buf[i+1]==116 && buf[i+2]==116 && buf[i+3]==112 && buf[i+4]==115 && buf[i+5]==58 && buf[i+6]==47 && buf[i+7]==47){
+	 	        	//https://
+		        	//104 116 116 112 115 58 47 47
         			out.write(buf, toWrite, i-toWrite);
         			out.write(prefixForHttps);
         			i += 8;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==104 && buf[i+1]==114 && buf[i+2]==101 && buf[i+3]==102 && buf[i+4]==61 && buf[i+5]==34 && buf[i+6]==47){
+        			// href="/
+		        	// 104, 114, 101, 102, 61, 34, 47
+        			// =>
+        			// href="/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForHrefDQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 7;
+        			toWrite = i;
+        		}
+        		else if (i<leftCount && buf[i]==104 && buf[i+1]==114 && buf[i+2]==101 && buf[i+3]==102 && buf[i+4]==61 && buf[i+5]==39 && buf[i+6]==47){
+        			// href='/
+		        	// 104, 114, 101, 102, 61, 39, 47
+        			// =>
+        			// href='/requstHost/
+        			out.write(buf, toWrite, i-toWrite);
+        			out.write(prefixForHrefSQ);
+        			out.write(requestHostBytes);
+        			out.write(prefixForslash);
+        			i += 7;
         			toWrite = i;
         		}
         	}
@@ -191,7 +232,7 @@ public class g_proxyServlet extends HttpServlet {
         }
         reader.close();
         String content = sBuffer.toString();
-        
+
         //replace
         content = content.replaceAll("src=\"https://", "src=\"https://g-proxy.appspot.com/https://");
         content = content.replaceAll("src=\"http://", "src=\"https://g-proxy.appspot.com/http://");
