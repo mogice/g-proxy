@@ -59,7 +59,6 @@ public class g_proxyServlet extends HttpServlet {
 			if (realUrl.length()>10){
 				int k = realUrl.indexOf("/", 8);
 				if (k>0){
-					k+=8;
 					requestHost = realUrl.substring(0,k);
 				}
 				else{
